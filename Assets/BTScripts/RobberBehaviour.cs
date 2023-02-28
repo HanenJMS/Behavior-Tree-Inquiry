@@ -8,7 +8,9 @@ public class RobberBehaviour : MonoBehaviour
 {
     BehaviourTree tree;
     NavMeshAgent agent;
-    [SerializeField] GameObject diamond, van;
+    [SerializeField] GameObject diamond, van, door;
+    ActionState state = ActionState.Idle;
+    Status treeStatus = Status.Running;
     private void Awake()
     {
         Initialization();
@@ -34,15 +36,18 @@ public class RobberBehaviour : MonoBehaviour
     private void Start()
     {
         tree = new BehaviourTree();
-        Node steal = new Node("Steal Something");
+        Sequence steal = new Sequence("Steal Something");
+        Leaf goToDoor = new Leaf("Go To Door", GoToDoor);
         Leaf goToDiamond = new Leaf("Go To Diamond", GoToDiamond);
         Leaf goToVan = new Leaf("Go To Van", GoToVan);
 
+        steal.AddChild(goToDoor);
         steal.AddChild(goToDiamond);
+        steal.AddChild(goToDoor);
         steal.AddChild(goToVan);
         tree.AddChild(steal);
 
-        tree.Process();
+        //tree.Process();
         //Node eat = new Node("Eat Something");
         //Node pizza = new Node("Go To Pizza Shop");
         //Node buy = new Node("Buy Pizza");
@@ -63,14 +68,46 @@ public class RobberBehaviour : MonoBehaviour
          *--Go To Van
          */
     }
-    public Status GoToDiamond()
+
+
+
+    private void Update()
     {
-        agent.SetDestination(diamond.transform.position);
-        return Status.Success;
+        if(treeStatus == Status.Running)
+        {
+            treeStatus = tree.Process();
+        }
     }
-    public Status GoToVan()
+    private Status GoToDoor()
     {
-        agent.SetDestination(van.transform.position);
-        return Status.Success;
+        return GoToLocation(door.transform.position);
+    }
+    Status GoToDiamond()
+    {
+        return GoToLocation(diamond.transform.position);
+    }
+    Status GoToVan()
+    {
+        return GoToLocation(van.transform.position);
+    }
+    Status GoToLocation(Vector3 destination)
+    {
+        float distanceToTarget = Vector3.Distance(destination, this.transform.position);
+        if(state == ActionState.Idle)
+        {
+            agent.SetDestination(destination);
+            state = ActionState.Working;
+        }
+        else if(Vector3.Distance(agent.pathEndPosition, destination) >= 2f)
+        {
+            state = ActionState.Idle;
+            return Status.Failure;
+        }
+        else if(distanceToTarget < 2f)
+        {
+            state = ActionState.Idle;
+            return Status.Success;
+        }
+        return Status.Running;
     }
 }
