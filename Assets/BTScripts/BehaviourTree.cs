@@ -7,10 +7,10 @@ public class BehaviourTree : Node
     {
         Name = "Tree";
     }
-    public override Status Process()
-    {
-        return children[CurrentChild].Process();
-    }
+    //public override Status Process()
+    //{
+    //    return children[CurrentChild].Process();
+    //}
     struct NodeLevel
     {
         public int level;

@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -15,6 +16,7 @@ public class Leaf : Node
         this.Name = name;
         this.ProcessMethod = processMethod;
     }
+
     public override Status Process()
     {
         if (ProcessMethod == null) return Status.Failure;
