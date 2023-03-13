@@ -1,73 +1,55 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Xml.Linq;
 using UnityEngine;
 using UnityEngine.AI;
 
-public class RobberBehaviour : MonoBehaviour
+public class RobberBehaviour : BehaviourTreeAgent
 {
-    BehaviourTree tree;
-    NavMeshAgent agent;
-    Inventory inventory;
-    [SerializeField] List<GameObject> itemsList = new List<GameObject>();
-    [SerializeField] Stack<GameObject> itemsToSteal = new Stack<GameObject>();
-    [SerializeField] GameObject diamond, van, backDoor, frontDoor, currentObjective;
-    ActionState state = ActionState.Idle;
-    Status treeStatus = Status.Running;
-    Status CurrentAction = Status.Success;
+    [SerializeField] Dictionary<Item, int> itemsList = new Dictionary<Item, int>();
+    [SerializeField] Stack<Item> itemsToSteal = new Stack<Item>();
+    [SerializeField] GameObject backDoor, frontDoor;
+
     [SerializeField] private int minMoney = 500;
 
-    private void Awake()
+    new void Start()
     {
-        Initialization();
+        base.Start();
+        CreateTree();
     }
-
-    private bool Initialization()
+    public override void CreateTree()
     {
-        return IsInitialized();
-    }
-
-    private bool IsInitialized()
-    {
-        Initialize();
-        if (agent == null) return false;
-        return true;
-    }
-
-    private void Initialize()
-    {
-        agent = GetComponent<NavMeshAgent>();
-        inventory = GetComponent<Inventory>();
-
-
-    }
-
-    private void Start()
-    {
-        foreach(GameObject item in itemsList)
+        foreach (Item item in FindObjectsOfType<Item>())
         {
-            itemsToSteal.Push(item);
+            itemsList.Add(item, item.GetValue());
         }
-        tree = new BehaviourTree();
+        foreach(KeyValuePair<Item, int> items in itemsList.OrderBy(key => key.Value))
+        {
+            itemsToSteal.Push(items.Key);
+        }
         Sequence steal = new Sequence("Steal Something");
         Selector openDoor = new Selector("Open Door");
+        Selector selectItemToSteal = new Selector("Choosing what to steal");
         Leaf hasGotMoney = new Leaf("Has Got Money", HasMoney);
         Leaf goToBackDoor = new Leaf("Go To Door", GoBackToDoor);
-        Leaf goToDiamond = new Leaf("Go To Diamond", GoToDiamond);
-        Leaf goToVan = new Leaf("Go To Van", GoToVan);
+        Leaf goTocurrentObjective = new Leaf("Go To Current Objective", GoToObjective);
+        Leaf goToVan = new Leaf("Go To Van", GoToMerchant);
         Leaf goToFrontDoor = new Leaf("GoToFrontDoor", GoToFrontDoor);
-        Leaf stealWholeMuseum = new Leaf("Steal the whole museum", StealWholeMuseum);
+        Inverter invertMoney = new Inverter("Has Money");
+        invertMoney.AddChild(hasGotMoney);
         openDoor.AddChild(goToFrontDoor);
         openDoor.AddChild(goToBackDoor);
 
 
-        steal.AddChild(hasGotMoney);
+        steal.AddChild(invertMoney);
         steal.AddChild(openDoor);
         //steal.AddChild(stealWholeMuseum);
-        steal.AddChild(goToDiamond);
+        steal.AddChild(goTocurrentObjective);
+        steal.AddChild(merchantSellingBehaviour);
         //steal.AddChild(goToDoor);
-        steal.AddChild(goToVan);
+        //steal.AddChild(goToVan);
         tree.AddChild(steal);
 
         //tree.Process();
@@ -91,24 +73,11 @@ public class RobberBehaviour : MonoBehaviour
          *--Go To Van
          */
     }
-
-    private Status SellItems()
-    {
-        inventory.SellAllItems();
-        return Status.Success;
-    }
-
-    private void Update()
-    {
-        if(treeStatus != Status.Success)
-        {
-            treeStatus = tree.Process();
-        }
-    }
     private Status HasMoney()
     {
-        if(inventory.GetMoney() >= minMoney)
+        if (inventory.GetMoney() < minMoney)
         {
+            currentObjective = itemsToSteal.Pop();
             return Status.Failure;
         }
         return Status.Success;
@@ -137,65 +106,23 @@ public class RobberBehaviour : MonoBehaviour
         return GoToDoor(backDoor);
     }
 
-    Status GoToItem(GameObject item)
+    Status GoToItem(Item item)
     {
-        if (!item.TryGetComponent<Item>(out Item artWork)) 
+        if (item.Equals(null)) 
         { 
             return Status.Failure; 
         }
         Status PerformAction = GoToLocation(item.transform.position);
         if(PerformAction.Equals(Status.Success))
         {
-            inventory.AddItem(artWork);
+            inventory.AddItem(item);
         }
         return PerformAction;
     }
-    Status StealWholeMuseum()
+    Status GoToObjective()
     {
-        Status isRunning = Status.Running;
-        if (itemsToSteal.Count == 0)
-        {
-            return Status.Success;
-        }
-        if (CurrentAction.Equals(Status.Success))
-        {
-            currentObjective = itemsToSteal.Pop();
-            CurrentAction = GoToItem(currentObjective);
-        }
-        return isRunning;
-    }
-    Status GoToDiamond()
-    {
-        return GoToItem(diamond);
+        return GoToItem(currentObjective);
     }
 
-    Status GoToVan()
-    {
-        Status actionSuccessful = GoToLocation(van.transform.position);
-        if(actionSuccessful.Equals(Status.Success))
-        {
-            return SellItems();
-        }
-        return actionSuccessful;
-    }
-    Status GoToLocation(Vector3 destination)
-    {
-        float distanceToTarget = Vector3.Distance(destination, this.transform.position);
-        if(state == ActionState.Idle)
-        {
-            agent.SetDestination(destination);
-            state = ActionState.Working;
-        }
-        else if(Vector3.Distance(agent.pathEndPosition, destination) >= 3f)
-        {
-            state = ActionState.Idle;
-            return Status.Failure;
-        }
-        else if(distanceToTarget < 3f)
-        {
-            state = ActionState.Idle;
-            return Status.Success;
-        }
-        return Status.Running;
-    }
+
 }
