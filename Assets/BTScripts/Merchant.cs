@@ -10,24 +10,53 @@ public class Merchant : MonoBehaviour
     {
         inventory = GetComponent<Inventory>();
     }
-    public void SellItem(Inventory client, Item item)
+    private bool CanBuyItem(Item item)
     {
-        if(item.GetValue() <= inventory.GetMoney())
+        return item.GetValue() <= inventory.GetGold();
+    }
+    //most likely initiated by other merchant
+    public bool SellItem(Merchant merchant, Item item)
+    {
+        if(CanBuyItem(item))
         {
-            TradeItem(client, item);
+            //TODO allow for trade value at higher level
+            int tradeValue = item.GetValue();
+            Buy(item, tradeValue);
+            merchant.Sell(item, tradeValue);
+            return true;
+        }
+        return false;
+    }
+    public void BuyItem(Merchant merchant, Item item)
+    {
+        if (inventory.RequestItemAvailable(item))
+        {
+            int cost = item.GetValue();
+            merchant.SellItem(this, item);
         }
     }
-    public void TradeItem(Inventory client, Item item)
+    public void Buy(Item item, int cost)
     {
-        inventory.BuyItem(item);
-        client.SellItem(item);
+        inventory.AddItem(item);
+        inventory.AddGold(-cost);
     }
-    private int GetInventoryValue()
+    private void Sell(Item item, int cost)
     {
-        foreach(Item item in inventory.GetInventoryList())
+        inventory.RemoveItem(item);
+        inventory.AddGold(cost);
+    }
+    
+    //Sell All Behaviour
+    public bool SellAll(Merchant merchant)
+    {
+        while(inventory.GetInventoryList().Count > 0)
         {
-            potentialValue += item.GetValue();
+            Item item = inventory.GetInventoryList()[0];
+            if(!merchant.SellItem(this, item))
+            {
+                return false;
+            }
         }
-        return potentialValue;
+        return true;
     }
 }

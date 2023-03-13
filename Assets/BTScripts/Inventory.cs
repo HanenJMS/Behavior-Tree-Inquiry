@@ -6,52 +6,33 @@ using UnityEngine;
 public class Inventory : MonoBehaviour
 {
     [SerializeField] List<Item> items = new List<Item>();
-    [SerializeField] int money = 0;
-    public void AddItem(Item item)
+    [SerializeField] int gold = 0;
+    public void PickUpItem(Item item)
     {
         items.Add(item.PickUpItem());
     }
-    public Item ItemToSell()
+    public void AddItem(Item item)
     {
-        if(items.Count != 0)
-        {
-            Item i = items[0];
-            return i;
-        }
-        return null;
+        items.Add(item);
     }
     public void RemoveItem(Item item)
     {
         items.Remove(item);
     }
-    public int GetMoney()
+    public bool RequestItemAvailable(Item itemType)
     {
-        return money;
+        return(items.Contains(itemType));
     }
-    public void AddMoney(int transaction)
+    public int GetGold()
     {
-        money += transaction;
+        return gold;
     }
-    public void BuyItem(Item item)
+    public void AddGold(int itemValue)
     {
-        AddMoney(-item.GetValue());
-        AddItem(item);
-    }
-    public void SellItem(Item item)
-    {
-        money += item.GetValue();
-        RemoveItem(item);
+        gold += itemValue;
     }
     public List<Item> GetInventoryList()
     {
         return items;
-    }
-    public void SellAllItems()
-    {
-        foreach (Item item in items)
-        {
-            AddMoney(item.GetValue());
-        }
-        items.Clear();
     }
 }

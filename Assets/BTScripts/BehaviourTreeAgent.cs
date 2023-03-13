@@ -13,7 +13,7 @@ public class BehaviourTreeAgent : MonoBehaviour
     public ActionState state = ActionState.Idle;
     public Status treeStatus = Status.Running;
     public Status CurrentAction = Status.Success;
-    [SerializeField] Merchant client;
+    [SerializeField] Merchant merchant;
     WaitForSeconds waitForSeconds;
     public void Awake()
     {
@@ -69,11 +69,10 @@ public class BehaviourTreeAgent : MonoBehaviour
     }
     public Status GoToMerchant()
     {
-        Status actionSuccessful = GoToLocation(client.transform.position);
+        Status actionSuccessful = GoToLocation(merchant.transform.position);
         if (actionSuccessful.Equals(Status.Success))
         {
-            Item item = inventory.ItemToSell();
-            client.SellItem(inventory, item);
+            GetComponent<Merchant>().SellAll(merchant);
             return Status.Success;
         }
         return actionSuccessful;
@@ -85,11 +84,11 @@ public class BehaviourTreeAgent : MonoBehaviour
         {
             return Status.Failure;
         }
-        foreach (Merchant client in FindObjectsOfType<Merchant>())
+        foreach (Merchant merchant in FindObjectsOfType<Merchant>())
         {
-            if (client != this.GetComponent<Merchant>())
+            if (merchant != this.GetComponent<Merchant>())
             {
-                this.client = client;
+                this.merchant = merchant;
                 return Status.Success;
             }
         }

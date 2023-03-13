@@ -75,7 +75,7 @@ public class RobberBehaviour : BehaviourTreeAgent
     }
     private Status HasMoney()
     {
-        if (inventory.GetMoney() < minMoney)
+        if (inventory.GetGold() < minMoney)
         {
             currentObjective = itemsToSteal.Pop();
             return Status.Failure;
@@ -115,7 +115,7 @@ public class RobberBehaviour : BehaviourTreeAgent
         Status PerformAction = GoToLocation(item.transform.position);
         if(PerformAction.Equals(Status.Success))
         {
-            inventory.AddItem(item);
+            inventory.PickUpItem(item);
         }
         return PerformAction;
     }
